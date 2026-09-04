@@ -227,7 +227,7 @@ function App() {
 
   const [showExportPreview, setShowExportPreview] =
     useState(false);
-
+const [exportImage, setExportImage] = useState(null);
   const [
     quarterFinals,
     setQuarterFinals
@@ -260,46 +260,41 @@ function App() {
      EXPORT
   ======================================== */
 
-  const exportBracket = async () => {
+const exportBracket = async () => {
+  if (!exportImage) return;
 
-    if (!exportRef.current) return;
+  const link = document.createElement("a");
 
-    try {
+  link.download =
+    "overwatch-world-cup-2026-prediction.png";
 
-      const dataUrl = await toPng(
-        exportRef.current,
-        {
-          pixelRatio: 2,
-          backgroundColor: "#0d1218",
-          cacheBust: true,
-        }
-      );
+  link.href = exportImage;
 
-      const link =
-        document.createElement("a");
-
-      link.download =
-        "overwatch-world-cup-2026-prediction.png";
-
-      link.href = dataUrl;
-
-      link.click();
-
-    } catch (error) {
-
-      console.error(
-        "Export failed:",
-        error
-      );
-
-    }
-
-  };
+  link.click();
+};
 
 
-  const openExportPreview = () => {
+ const openExportPreview = async () => {
+  if (!exportRef.current) return;
+
+  try {
+    const node = exportRef.current;
+
+    const dataUrl = await toPng(node, {
+      pixelRatio: 2,
+      backgroundColor: "#101720",
+      cacheBust: true,
+      width: node.scrollWidth,
+      height: node.scrollHeight,
+    });
+
+    setExportImage(dataUrl);
     setShowExportPreview(true);
-  };
+
+  } catch (error) {
+    console.error("Preview failed:", error);
+  }
+};
 
 
   const closeExportPreview = () => {
@@ -924,45 +919,55 @@ function App() {
 
       {/* EXPORT PREVIEW */}
 
-      {showExportPreview && (
+{showExportPreview && (
 
-        <div className="export-preview">
+  <div className="export-preview">
 
-          <div className="export-preview-top">
+    <div className="export-preview-top">
 
-            <span>
-              TAKE A SCREENSHOT TO SAVE YOUR PREDICTION
-            </span>
+      <span>
+        TAKE A SCREENSHOT OR DOWNLOAD YOUR PREDICTION
+      </span>
+
+      <button
+        className="close-export-preview"
+        onClick={closeExportPreview}
+      >
+        ✕
+      </button>
+
+    </div>
 
 
-            <button
-              className="close-export-preview"
-              onClick={closeExportPreview}
-            >
-              ✕
-            </button>
+    <div className="export-preview-content">
 
-          </div>
+      {exportImage && (
 
-
-          <div className="export-preview-content">
-
-            <div className="export-preview-actions">
-
-              <button
-                className="download-export-button"
-                onClick={exportBracket}
-              >
-                DOWNLOAD PNG
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
+        <img
+          src={exportImage}
+          alt="Tournament prediction"
+          className="export-preview-image"
+        />
 
       )}
+
+
+      <div className="export-preview-actions">
+
+        <button
+          className="download-export-button"
+          onClick={exportBracket}
+        >
+          DOWNLOAD PNG
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+)}
 
     </div>
 
