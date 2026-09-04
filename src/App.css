@@ -150,45 +150,34 @@ input {
 }
 
 .brand-icon {
-  width: 72px;
-  height: 72px;
+  width: 58px;
+  height: 58px;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  flex-shrink: 0;
-
-  background: linear-gradient(
-  90deg,
-  #8D6D35,
-  #D2AE66,
-  #A67E3E
-);
-
-  border-radius: 18px;
+  color: #d8b25c;
 }
 
 .brand-icon svg {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
 
-  color: #ffffff;
+  stroke-width: 2;
 }
-
 .brand-icon span {
-  position: absolute;
-
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
 
   border-radius: 50%;
 
-  background: #ffffff;
-
-  top: 19px;
-  left: 19px;
+  background: #f2f4f7;
 }
+
+
+
+
 
 
 .brand-text {
@@ -1148,4 +1137,68 @@ font-family: var(--font-ui);
 .footer {
   position: relative;
   z-index: 1;
+}
+.export-preview {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 9999;
+
+  overflow: auto;
+
+  padding: 20px;
+
+  background: #070b0d;
+}
+
+.export-preview-top {
+  position: sticky;
+
+  top: 0;
+
+  z-index: 10;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 16px 20px;
+
+  margin-bottom: 20px;
+
+  background: rgba(7, 11, 13, 0.96);
+
+  border-bottom:
+    1px solid rgba(201, 164, 93, 0.3);
+
+  color: #d4af5a;
+
+  font-size: 13px;
+
+  font-weight: 800;
+
+  letter-spacing: 1px;
+}
+
+.close-export-preview {
+  width: 44px;
+  height: 44px;
+
+  border: 1px solid rgba(201, 164, 93, 0.4);
+
+  background: transparent;
+
+  color: #ffffff;
+
+  font-size: 20px;
+
+  cursor: pointer;
+}
+
+.export-preview-content {
+  min-width: 1000px;
+
+  padding: 30px;
 }

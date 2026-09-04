@@ -4,7 +4,8 @@ import { teams } from "./data/teams";
 import { toPng } from "html-to-image";
 import { FaXTwitter } from "react-icons/fa6";
 import { SiKofi } from "react-icons/si";
-import { GiTrophyCup } from "react-icons/gi";
+import { Trophy } from "lucide-react";
+
 
 const initialQuarterFinals = [
   {
@@ -37,7 +38,80 @@ const initialQuarterFinals = [
   },
 ];
 
-const emptyScore = { score1: "", score2: "" };
+const emptyScore = {
+  score1: "",
+  score2: "",
+};
+
+
+/* ========================================
+   BO5 FUNCTIONS
+======================================== */
+
+const isValidSeries = (score1, score2, bestOf = 5) => {
+  if (score1 === "" || score2 === "") return false;
+
+  const s1 = Number(score1);
+  const s2 = Number(score2);
+
+  const winsNeeded = Math.ceil(bestOf / 2);
+
+  if (s1 < 0 || s2 < 0) return false;
+  if (s1 > winsNeeded || s2 > winsNeeded) return false;
+
+  return (
+    (s1 === winsNeeded && s2 < winsNeeded) ||
+    (s2 === winsNeeded && s1 < winsNeeded)
+  );
+};
+
+
+const getWinner = (
+  team1,
+  team2,
+  score1,
+  score2,
+  bestOf = 5
+) => {
+  if (!team1 || !team2) return null;
+
+  if (!isValidSeries(score1, score2, bestOf)) {
+    return null;
+  }
+
+  const winsNeeded = Math.ceil(bestOf / 2);
+
+  return Number(score1) === winsNeeded
+    ? team1
+    : team2;
+};
+
+
+const getLoser = (
+  team1,
+  team2,
+  score1,
+  score2,
+  bestOf = 5
+) => {
+  if (!team1 || !team2) return null;
+
+  if (!isValidSeries(score1, score2, bestOf)) {
+    return null;
+  }
+
+  const winsNeeded = Math.ceil(bestOf / 2);
+
+  return Number(score1) === winsNeeded
+    ? team2
+    : team1;
+};
+
+
+/* ========================================
+   TEAM ROW
+======================================== */
+
 function TeamRow({
   team,
   score,
@@ -45,6 +119,7 @@ function TeamRow({
   disabled,
   winner,
   loser,
+  maxScore = 3,
 }) {
   return (
     <div
@@ -72,43 +147,23 @@ function TeamRow({
         className="score-input"
         type="number"
         min="0"
-        max="3"
+        max={maxScore}
         value={score}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
       />
     </div>
   );
 }
-  const isValidBO5 = (score1, score2) => {
-    if (score1 === "" || score2 === "") return false;
 
-    const s1 = Number(score1);
-    const s2 = Number(score2);
 
-    if (s1 < 0 || s2 < 0) return false;
-    if (s1 > 3 || s2 > 3) return false;
+/* ========================================
+   MATCH
+======================================== */
 
-    return (
-      (s1 === 3 && s2 < 3) ||
-      (s2 === 3 && s1 < 3)
-    );
-  };
-
-  const getWinner = (team1, team2, score1, score2) => {
-    if (!team1 || !team2) return null;
-    if (!isValidBO5(score1, score2)) return null;
-
-    return Number(score1) === 3 ? team1 : team2;
-  };
-
-  const getLoser = (team1, team2, score1, score2) => {
-    if (!team1 || !team2) return null;
-    if (!isValidBO5(score1, score2)) return null;
-
-    return Number(score1) === 3 ? team2 : team1;
-  };
-  function Match({
+function Match({
   team1,
   team2,
   score1,
@@ -116,19 +171,24 @@ function TeamRow({
   onScore1Change,
   onScore2Change,
   disabled = false,
+  bestOf = 5,
 }) {
+  const winsNeeded = Math.ceil(bestOf / 2);
+
   const winner = getWinner(
     team1,
     team2,
     score1,
-    score2
+    score2,
+    bestOf
   );
 
   const loser = getLoser(
     team1,
     team2,
     score1,
-    score2
+    score2,
+    bestOf
   );
 
   return (
@@ -140,6 +200,7 @@ function TeamRow({
         disabled={disabled}
         winner={winner?.id === team1?.id}
         loser={loser?.id === team1?.id}
+        maxScore={winsNeeded}
       />
 
       <TeamRow
@@ -149,85 +210,150 @@ function TeamRow({
         disabled={disabled}
         winner={winner?.id === team2?.id}
         loser={loser?.id === team2?.id}
+        maxScore={winsNeeded}
       />
     </div>
   );
 }
+
+
+/* ========================================
+   APP
+======================================== */
+
 function App() {
+
   const exportRef = useRef(null);
-const exportBracket = async () => {
-  if (!exportRef.current) return;
 
-  try {
-    const dataUrl = await toPng(exportRef.current, {
-      pixelRatio: 2,
-      backgroundColor: "#0d1218",
-      cacheBust: true,
-    });
+  const [showExportPreview, setShowExportPreview] =
+    useState(false);
 
-    const link = document.createElement("a");
+  const [
+    quarterFinals,
+    setQuarterFinals
+  ] = useState(initialQuarterFinals);
 
-    link.download = "overwatch-world-cup-2026-prediction.png";
-    link.href = dataUrl;
-
-    link.click();
-  } catch (error) {
-    console.error("Export failed:", error);
-  }
-};
-  const resetBracket = () => {
-  setQuarterFinals(
-    initialQuarterFinals.map((match) => ({
-      ...match,
-      score1: "",
-      score2: "",
-    }))
-  );
-
-  setSemiScores([
-    { score1: "", score2: "" },
-    { score1: "", score2: "" },
-  ]);
-
-  setFinalScores({
-    score1: "",
-    score2: "",
-  });
-
-  setThirdPlaceScores({
-    score1: "",
-    score2: "",
-  });
-};
-  const [quarterFinals, setQuarterFinals] =
-    useState(initialQuarterFinals);
-
-  const [semiScores, setSemiScores] = useState([
+  const [
+    semiScores,
+    setSemiScores
+  ] = useState([
     { ...emptyScore },
     { ...emptyScore },
   ]);
 
-  const [finalScores, setFinalScores] = useState({
+  const [
+    finalScores,
+    setFinalScores
+  ] = useState({
     ...emptyScore,
   });
 
-  const [thirdPlaceScores, setThirdPlaceScores] =
-    useState({ ...emptyScore });
+  const [
+    thirdPlaceScores,
+    setThirdPlaceScores
+  ] = useState({
+    ...emptyScore,
+  });
 
-  // BO5 VALIDATION
+
+  /* ========================================
+     EXPORT
+  ======================================== */
+
+  const exportBracket = async () => {
+
+    if (!exportRef.current) return;
+
+    try {
+
+      const dataUrl = await toPng(
+        exportRef.current,
+        {
+          pixelRatio: 2,
+          backgroundColor: "#0d1218",
+          cacheBust: true,
+        }
+      );
+
+      const link =
+        document.createElement("a");
+
+      link.download =
+        "overwatch-world-cup-2026-prediction.png";
+
+      link.href = dataUrl;
+
+      link.click();
+
+    } catch (error) {
+
+      console.error(
+        "Export failed:",
+        error
+      );
+
+    }
+
+  };
 
 
-  // QF WINNERS
-  const qfWinners = quarterFinals.map((match) =>
-    getWinner(
-      match.team1,
-      match.team2,
-      match.score1,
-      match.score2
-    )
-  );
+  const openExportPreview = () => {
+    setShowExportPreview(true);
+  };
 
-  // SEMIFINALS
+
+  const closeExportPreview = () => {
+    setShowExportPreview(false);
+  };
+
+
+  /* ========================================
+     RESET
+  ======================================== */
+
+  const resetBracket = () => {
+
+    setQuarterFinals(
+      initialQuarterFinals.map(
+        (match) => ({
+          ...match,
+          score1: "",
+          score2: "",
+        })
+      )
+    );
+
+    setSemiScores([
+      { ...emptyScore },
+      { ...emptyScore },
+    ]);
+
+    setFinalScores({
+      ...emptyScore,
+    });
+
+    setThirdPlaceScores({
+      ...emptyScore,
+    });
+
+  };
+
+
+  /* ========================================
+     WINNERS
+  ======================================== */
+
+  const qfWinners =
+    quarterFinals.map((match) =>
+      getWinner(
+        match.team1,
+        match.team2,
+        match.score1,
+        match.score2
+      )
+    );
+
+
   const semiFinals = [
     {
       team1: qfWinners[0],
@@ -239,488 +365,610 @@ const exportBracket = async () => {
     },
   ];
 
-  const semiWinners = semiFinals.map((match, index) =>
-    getWinner(
-      match.team1,
-      match.team2,
-      semiScores[index].score1,
-      semiScores[index].score2
-    )
-  );
 
-  const semiLosers = semiFinals.map((match, index) =>
-    getLoser(
-      match.team1,
-      match.team2,
-      semiScores[index].score1,
-      semiScores[index].score2
-    )
-  );
+  const semiWinners =
+    semiFinals.map((match, index) =>
+      getWinner(
+        match.team1,
+        match.team2,
+        semiScores[index].score1,
+        semiScores[index].score2
+      )
+    );
 
-  // GRAND FINAL
+
+  const semiLosers =
+    semiFinals.map((match, index) =>
+      getLoser(
+        match.team1,
+        match.team2,
+        semiScores[index].score1,
+        semiScores[index].score2
+      )
+    );
+
+
   const finalMatch = {
     team1: semiWinners[0],
     team2: semiWinners[1],
   };
 
+
   const champion = getWinner(
     finalMatch.team1,
     finalMatch.team2,
     finalScores.score1,
-    finalScores.score2
+    finalScores.score2,
+    7,
   );
 
-  // THIRD PLACE
+
   const thirdPlaceMatch = {
     team1: semiLosers[0],
     team2: semiLosers[1],
   };
 
 
+  /* ========================================
+     UPDATE SCORES
+  ======================================== */
 
-  // UPDATE QF
-  const updateQuarterScore = (id, field, value) => {
+  const updateQuarterScore = (
+    id,
+    field,
+    value
+  ) => {
+
     setQuarterFinals((matches) =>
       matches.map((match) =>
         match.id === id
-          ? { ...match, [field]: value }
+          ? {
+              ...match,
+              [field]: value,
+            }
           : match
       )
     );
 
-    // Clear everything downstream
     setSemiScores([
       { ...emptyScore },
       { ...emptyScore },
     ]);
-    setFinalScores({ ...emptyScore });
-    setThirdPlaceScores({ ...emptyScore });
+
+    setFinalScores({
+      ...emptyScore,
+    });
+
+    setThirdPlaceScores({
+      ...emptyScore,
+    });
+
   };
 
-  // UPDATE SEMI
-  const updateSemiScore = (index, field, value) => {
+
+  const updateSemiScore = (
+    index,
+    field,
+    value
+  ) => {
+
     setSemiScores((scores) =>
       scores.map((score, i) =>
         i === index
-          ? { ...score, [field]: value }
+          ? {
+              ...score,
+              [field]: value,
+            }
           : score
       )
     );
 
-    setFinalScores({ ...emptyScore });
-    setThirdPlaceScores({ ...emptyScore });
+    setFinalScores({
+      ...emptyScore,
+    });
+
+    setThirdPlaceScores({
+      ...emptyScore,
+    });
+
   };
 
-  const updateFinalScore = (field, value) => {
+
+  const updateFinalScore = (
+    field,
+    value
+  ) => {
+
     setFinalScores((scores) => ({
       ...scores,
       [field]: value,
     }));
+
   };
 
-  const updateThirdPlaceScore = (field, value) => {
+
+  const updateThirdPlaceScore = (
+    field,
+    value
+  ) => {
+
     setThirdPlaceScores((scores) => ({
       ...scores,
       [field]: value,
     }));
+
   };
 
-  // TEAM ROW
-function TeamRow({
-  team,
-  score,
-  onChange,
-  disabled,
-  winner,
-  loser,
-}) {
-  return (
-    <div
-      className={`team-row ${
-        winner ? "winner-row" : ""
-      } ${
-        loser ? "loser-row" : ""
-      }`}
-    >
-      <span className="team-name">
-        {team?.name || "TBD"}
-      </span>
 
-      <div className="team-logo-box">
-        {team?.logo && (
-          <img
-            src={team.logo}
-            alt={team.name}
-            className="team-logo"
-          />
-        )}
-      </div>
-
-      <input
-        className="score-input"
-        type="number"
-        min="0"
-        max="3"
-        value={score}
-        disabled={disabled}
-        onChange={(e) =>
-          onChange(e.target.value)
-        }
-      />
-    </div>
-  );
-}
-
-  // MATCH CARD
-  function Match({
-    team1,
-    team2,
-    score1,
-    score2,
-    onScore1Change,
-    onScore2Change,
-    disabled = false,
-  }) {
-    const winner = getWinner(
-      team1,
-      team2,
-      score1,
-      score2
-    );
-const loser = getLoser(
-  team1,
-  team2,
-  score1,
-  score2
-);
-    return (
-      <div className="match-card">
-        <TeamRow
-          team={team1}
-          score={score1}
-          onChange={onScore1Change}
-          disabled={disabled}
-          winner={winner?.id === team1?.id}
-          loser={loser?.id === team1?.id}
-        />
-
-        <TeamRow
-          team={team2}
-          score={score2}
-          onChange={onScore2Change}
-          disabled={disabled}
-          winner={winner?.id === team2?.id}
-          loser={loser?.id === team2?.id}
-        />
-      </div>
-    );
-  }
+  /* ========================================
+     RETURN
+  ======================================== */
 
   return (
+
     <div className="app">
-<header className="site-header">
 
-  {/* LEFT — BRAND */}
-  <div className="brand">
-<div className="brand-icon">
-  <GiTrophyCup />
-    </div>
+      {/* HEADER */}
 
-    <div className="brand-text">
-      <h1>PLAYOFFS</h1>
-      <p>TOURNAMENT PREDICTOR</p>
-    </div>
-  </div>
+      <header className="site-header">
 
+        <div className="brand">
 
-  {/* CENTER — EVENT INFO */}
-  <div className="event-info">
+          <div className="brand-icon">
+             <Trophy />
+          </div>
 
-    <div className="event-title">
-      OVERWATCH WORLD CUP 2026
-    </div>
+          <div className="brand-text">
+            <h1>PLAYOFFS</h1>
+            <p>
+              TOURNAMENT PREDICTOR
+            </p>
+          </div>
 
-    <div className="event-meta">
-      <span>BEST OF 5</span>
-
-      <span className="meta-dot">•</span>
-
-      <span>8 TEAMS</span>
-
-      <span className="meta-dot">•</span>
-
-      <span>SINGLE ELIMINATION</span>
-    </div>
-
-  </div>
+        </div>
 
 
-  {/* RIGHT — ACTIONS */}
-  <div className="header-actions">
+        <div className="event-info">
 
-    <button
-      className="reset-button"
-      onClick={resetBracket}
-    >
-      RESET
-    </button>
+          <div className="event-title">
+            OVERWATCH WORLD CUP 2026
+          </div>
 
-    <button
-      className="export-button"
-      onClick={exportBracket}
-    >
-      EXPORT PREDICTION
-    </button>
+          <div className="event-meta">
 
-  </div>
+            <span>BEST OF 5</span>
 
-</header>
+            <span className="meta-dot">
+              •
+            </span>
+
+            <span>8 TEAMS</span>
+
+            <span className="meta-dot">
+              •
+            </span>
+
+            <span>
+              SINGLE ELIMINATION
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <div className="header-actions">
+
+          <button
+            className="reset-button"
+            onClick={resetBracket}
+          >
+            RESET
+          </button>
+
+
+          <button
+            className="export-button"
+            onClick={openExportPreview}
+          >
+            EXPORT PREDICTION
+          </button>
+
+        </div>
+
+      </header>
+
+
+      {/* BRACKET */}
 
       <div
-  className="bracket-wrapper"
-  ref={exportRef}
->
-  <div className="export-event-title">
-  <span>OVERWATCH WORLD CUP</span>
-  <strong>2026</strong>
-</div>
+        className="bracket-wrapper"
+        ref={exportRef}
+      >
+
+        <div className="export-event-title">
+
+          <span>
+            OVERWATCH WORLD CUP
+          </span>
+
+          <strong>
+            2026
+          </strong>
+
+        </div>
+
+
         <div className="bracket">
 
+
           {/* QUARTERFINALS */}
+
           <div className="round quarterfinals">
+
             <div className="round-title">
               Quarterfinals
             </div>
 
-<div className="qf-matches">
 
-  <div className="qf-pair">
-    {quarterFinals.slice(0, 2).map((match) => (
-      <div
-        className="bracket-match qf-bracket-match"
-        key={match.id}
-      >
-        <Match
-          team1={match.team1}
-          team2={match.team2}
-          score1={match.score1}
-          score2={match.score2}
-          onScore1Change={(value) =>
-            updateQuarterScore(
-              match.id,
-              "score1",
-              value
-            )
-          }
-          onScore2Change={(value) =>
-            updateQuarterScore(
-              match.id,
-              "score2",
-              value
-            )
-          }
-        />
-      </div>
-    ))}
-  </div>
+            <div className="qf-matches">
 
-  <div className="qf-pair">
-    {quarterFinals.slice(2, 4).map((match) => (
-      <div
-        className="bracket-match qf-bracket-match"
-        key={match.id}
-      >
-        <Match
-          team1={match.team1}
-          team2={match.team2}
-          score1={match.score1}
-          score2={match.score2}
-          onScore1Change={(value) =>
-            updateQuarterScore(
-              match.id,
-              "score1",
-              value
-            )
-          }
-          onScore2Change={(value) =>
-            updateQuarterScore(
-              match.id,
-              "score2",
-              value
-            )
-          }
-        />
-      </div>
-    ))}
-  </div>
+              <div className="qf-pair">
 
-</div>
+                {quarterFinals
+                  .slice(0, 2)
+                  .map((match) => (
+
+                    <div
+                      className="bracket-match qf-bracket-match"
+                      key={match.id}
+                    >
+
+                      <Match
+                        team1={match.team1}
+                        team2={match.team2}
+                        score1={match.score1}
+                        score2={match.score2}
+                        onScore1Change={(value) =>
+                          updateQuarterScore(
+                            match.id,
+                            "score1",
+                            value
+                          )
+                        }
+                        onScore2Change={(value) =>
+                          updateQuarterScore(
+                            match.id,
+                            "score2",
+                            value
+                          )
+                        }
+                      />
+
+                    </div>
+
+                  ))}
+
+              </div>
+
+
+              <div className="qf-pair">
+
+                {quarterFinals
+                  .slice(2, 4)
+                  .map((match) => (
+
+                    <div
+                      className="bracket-match qf-bracket-match"
+                      key={match.id}
+                    >
+
+                      <Match
+                        team1={match.team1}
+                        team2={match.team2}
+                        score1={match.score1}
+                        score2={match.score2}
+                        onScore1Change={(value) =>
+                          updateQuarterScore(
+                            match.id,
+                            "score1",
+                            value
+                          )
+                        }
+                        onScore2Change={(value) =>
+                          updateQuarterScore(
+                            match.id,
+                            "score2",
+                            value
+                          )
+                        }
+                      />
+
+                    </div>
+
+                  ))}
+
+              </div>
+
+            </div>
+
           </div>
 
+
           {/* SEMIFINALS */}
+
           <div className="round semifinals">
+
             <div className="round-title">
               Semifinals
             </div>
 
-<div className="semi-matches">
 
-  <div className="semi-pair">
-    {semiFinals.map((match, index) => (
-      <div
-        className="bracket-match semi-bracket-match"
-        key={index}
-      >
-        <Match
-          team1={match.team1}
-          team2={match.team2}
-          score1={semiScores[index].score1}
-          score2={semiScores[index].score2}
-          disabled={
-            !match.team1 || !match.team2
-          }
-          onScore1Change={(value) =>
-            updateSemiScore(
-              index,
-              "score1",
-              value
-            )
-          }
-          onScore2Change={(value) =>
-            updateSemiScore(
-              index,
-              "score2",
-              value
-            )
-          }
-        />
-      </div>
-    ))}
-  </div>
+            <div className="semi-matches">
 
-</div>
+              <div className="semi-pair">
+
+                {semiFinals.map(
+                  (match, index) => (
+
+                    <div
+                      className="bracket-match semi-bracket-match"
+                      key={index}
+                    >
+
+                      <Match
+                        team1={match.team1}
+                        team2={match.team2}
+                        score1={
+                          semiScores[index].score1
+                        }
+                        score2={
+                          semiScores[index].score2
+                        }
+                        disabled={
+                          !match.team1 ||
+                          !match.team2
+                        }
+                        onScore1Change={(value) =>
+                          updateSemiScore(
+                            index,
+                            "score1",
+                            value
+                          )
+                        }
+                        onScore2Change={(value) =>
+                          updateSemiScore(
+                            index,
+                            "score2",
+                            value
+                          )
+                        }
+                      />
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+
+            </div>
+
           </div>
 
-{/* RIGHT SIDE */}
-<div className="finals-area">
 
-  <div className="round-title">
-    Grand Final
-  </div>
+          {/* FINALS */}
 
-  <div className="final-stage">
+          <div className="finals-area">
 
-    {/* GRAND FINAL MATCH */}
-    <div className="final-match-container">
-      <Match
-        team1={finalMatch.team1}
-        team2={finalMatch.team2}
-        score1={finalScores.score1}
-        score2={finalScores.score2}
-        disabled={
-          !finalMatch.team1 ||
-          !finalMatch.team2
-        }
-        onScore1Change={(value) =>
-          updateFinalScore("score1", value)
-        }
-        onScore2Change={(value) =>
-          updateFinalScore("score2", value)
-        }
-      />
-    </div>
-
-    {/* CHAMPION */}
-    <div className="champion-card">
-      <div className="champion-label">
-        🏆 CHAMPION
-      </div>
-
-      {champion ? (
-        <>
-          <img
-            src={champion.logo}
-            alt={champion.name}
-          />
-
-          <strong>
-            {champion.name}
-          </strong>
-        </>
-      ) : (
-        <strong>TBD</strong>
-      )}
-    </div>
-
-  </div>
+            <div className="round-title">
+              Grand Final
+            </div>
 
 
-  {/* THIRD PLACE */}
-  <div className="third-place">
+            <div className="final-stage">
 
-    <div className="round-title">
-      Third Place Match
-    </div>
 
-    <Match
-      team1={thirdPlaceMatch.team1}
-      team2={thirdPlaceMatch.team2}
-      score1={thirdPlaceScores.score1}
-      score2={thirdPlaceScores.score2}
-      disabled={
-        !thirdPlaceMatch.team1 ||
-        !thirdPlaceMatch.team2
-      }
-      onScore1Change={(value) =>
-        updateThirdPlaceScore("score1", value)
-      }
-      onScore2Change={(value) =>
-        updateThirdPlaceScore("score2", value)
-      }
-    />
+              <div className="final-match-container">
 
-  </div>
+                <Match
+  team1={finalMatch.team1}
+  team2={finalMatch.team2}
+  score1={finalScores.score1}
+  score2={finalScores.score2}
+  bestOf={7}
+  disabled={
+    !finalMatch.team1 ||
+    !finalMatch.team2
+  }
+  onScore1Change={(value) =>
+    updateFinalScore("score1", value)
+  }
+  onScore2Change={(value) =>
+    updateFinalScore("score2", value)
+  }
+/>
 
-</div>
+              </div>
 
+
+              <div className="champion-card">
+
+                <div className="champion-label">
+                  🏆 CHAMPION
+                </div>
+
+
+                {champion ? (
+
+                  <>
+
+                    <img
+                      src={champion.logo}
+                      alt={champion.name}
+                    />
+
+                    <strong>
+                      {champion.name}
+                    </strong>
+
+                  </>
+
+                ) : (
+
+                  <strong>
+                    TBD
+                  </strong>
+
+                )}
+
+              </div>
+
+            </div>
+
+
+            {/* THIRD PLACE */}
+
+            <div className="third-place">
+
+              <div className="round-title">
+                Third Place Match
+              </div>
+
+
+              <Match
+                team1={thirdPlaceMatch.team1}
+                team2={thirdPlaceMatch.team2}
+                score1={
+                  thirdPlaceScores.score1
+                }
+                score2={
+                  thirdPlaceScores.score2
+                }
+                disabled={
+                  !thirdPlaceMatch.team1 ||
+                  !thirdPlaceMatch.team2
+                }
+                onScore1Change={(value) =>
+                  updateThirdPlaceScore(
+                    "score1",
+                    value
+                  )
+                }
+                onScore2Change={(value) =>
+                  updateThirdPlaceScore(
+                    "score2",
+                    value
+                  )
+                }
+              />
+
+            </div>
+
+          </div>
 
         </div>
+
       </div>
-<footer className="footer">
-  <div className="footer-top">
-    <span>CREATED BY</span>
-    <strong>ISS4M</strong>
-  </div>
 
-  <div className="footer-socials">
-    <a
-      href="https://x.com/IssamEam2"
-      target="_blank"
-      rel="noreferrer"
-      className="footer-link"
-      aria-label="X"
-    >
-      <FaXTwitter />
-    </a>
 
-    <a
-      href="https://ko-fi.com/iss4m"
-      target="_blank"
-      rel="noreferrer"
-      className="footer-link"
-      aria-label="Ko-fi"
-    >
-      <SiKofi />
-    </a>
-  </div>
+      {/* FOOTER */}
 
-  <div className="footer-bottom">
-    OVERWATCH WORLD CUP 2026 PREDICTOR
-  </div>
-</footer>
+      <footer className="footer">
+
+        <div className="footer-top">
+
+          <span>
+            CREATED BY
+          </span>
+
+          <strong>
+            ISS4M
+          </strong>
+
+        </div>
+
+
+        <div className="footer-socials">
+
+          <a
+            href="https://x.com/IssamEam2"
+            target="_blank"
+            rel="noreferrer"
+            className="footer-link"
+            aria-label="X"
+          >
+            <FaXTwitter />
+          </a>
+
+
+          <a
+            href="https://ko-fi.com/iss4m"
+            target="_blank"
+            rel="noreferrer"
+            className="footer-link"
+            aria-label="Ko-fi"
+          >
+            <SiKofi />
+          </a>
+
+        </div>
+
+
+        <div className="footer-bottom">
+          OVERWATCH WORLD CUP 2026 PREDICTOR
+        </div>
+
+      </footer>
+
+
+      {/* EXPORT PREVIEW */}
+
+      {showExportPreview && (
+
+        <div className="export-preview">
+
+          <div className="export-preview-top">
+
+            <span>
+              TAKE A SCREENSHOT TO SAVE YOUR PREDICTION
+            </span>
+
+
+            <button
+              className="close-export-preview"
+              onClick={closeExportPreview}
+            >
+              ✕
+            </button>
+
+          </div>
+
+
+          <div className="export-preview-content">
+
+            <div className="export-preview-actions">
+
+              <button
+                className="download-export-button"
+                onClick={exportBracket}
+              >
+                DOWNLOAD PNG
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
     </div>
-    
+
   );
-  
+
 }
+
+
 export default App;
