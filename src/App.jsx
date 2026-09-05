@@ -143,17 +143,30 @@ function TeamRow({
         )}
       </div>
 
-      <input
-        className="score-input"
-        type="number"
-        min="0"
-        max={maxScore}
-        value={score}
-        disabled={disabled}
-        onChange={(e) =>
-          onChange(e.target.value)
-        }
-      />
+<input
+  className="score-input"
+  type="number"
+  min="0"
+  max="3"
+  value={score}
+  disabled={disabled}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    // السماح بمسح القيمة
+    if (value === "") {
+      onChange("");
+      return;
+    }
+
+    const number = Number(value);
+
+    // السماح فقط بالأرقام من 0 إلى 3
+    if (number >= 0 && number <= 3) {
+      onChange(value);
+    }
+  }}
+/>
     </div>
   );
 }
