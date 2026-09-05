@@ -889,7 +889,7 @@ const exportBracket = async () => {
           </span>
 
           <strong>
-            ISS4M
+            ISS4M.
           </strong>
 
         </div>
